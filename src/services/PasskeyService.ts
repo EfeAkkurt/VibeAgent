@@ -25,13 +25,25 @@ export class BiometricService {
   // Check if platform authenticator (biometrics) is available
   static async isBiometricAvailable(): Promise<boolean> {
     if (!this.isWebAuthnSupported()) {
+      console.log("[BiometricService] WebAuthn not supported.");
       return false;
     }
 
     try {
-      return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      console.log(
+        "[BiometricService] Checking for user-verifying platform authenticator..."
+      );
+      const available =
+        await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      console.log(
+        `[BiometricService] Platform authenticator available: ${available}`
+      );
+      return available;
     } catch (error) {
-      console.error("Error checking biometric availability:", error);
+      console.error(
+        "[BiometricService] Error checking biometric availability:",
+        error
+      );
       return false;
     }
   }
@@ -160,12 +172,17 @@ export class BiometricService {
     }
 
     try {
+      console.log(`[BiometricService] Authenticating user: ${username}`);
       // Get stored credential
       const storedCredential = localStorage.getItem(this.CREDENTIAL_KEY);
       if (!storedCredential) {
         // Try to register first
         const registerResult = await this.register(username, options);
         if (!registerResult.success) {
+          console.log(
+            "[BiometricService] Authentication failed: No credential and registration failed.",
+            registerResult.error
+          );
           return { success: false, error: registerResult.error };
         }
       }
@@ -181,11 +198,13 @@ export class BiometricService {
           rpId: window.location.hostname,
         };
 
+      console.log("[BiometricService] Requesting credential from browser...");
       const credential = await navigator.credentials.get({
         publicKey: publicKeyCredentialRequestOptions,
       });
 
       if (credential) {
+        console.log("[BiometricService] Credential received successfully.");
         localStorage.setItem(this.AUTH_METHOD_KEY, "biometric");
         localStorage.setItem(this.SESSION_KEY, Date.now().toString());
         return { success: true };
@@ -193,7 +212,10 @@ export class BiometricService {
 
       return { success: false, error: "Authentication failed" };
     } catch (error: unknown) {
-      console.error("Error authenticating with biometrics:", error);
+      console.error(
+        "[BiometricService] Error authenticating with biometrics:",
+        error
+      );
 
       const err = error as Error;
       if (err.name === "NotAllowedError") {

@@ -163,10 +163,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: "spring", duration: 0.5 }}
-            className="w-full h-full md:w-5/6 md:h-5/6 bg-white shadow-2xl overflow-hidden flex"
+            className="w-full h-full bg-white shadow-2xl overflow-hidden flex"
           >
-            {/* Sidebar */}
-            <div className="w-72 bg-gradient-to-b from-primary to-foreground border-r border-secondary/20 flex flex-col">
+            {/* Sidebar - Reduced to 280px max width */}
+            <div className="w-[280px] min-w-[280px] bg-gradient-to-b from-primary to-foreground border-r border-secondary/20 flex flex-col">
               <div className="p-4 border-b border-white/10">
                 <div className="flex items-center justify-between">
                   <h3 className="text-white font-poppins font-bold text-lg">
@@ -218,7 +218,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
               </div>
             </div>
 
-            {/* Chat Area */}
+            {/* Chat Area - Takes remaining width */}
             <div className="flex-1 flex flex-col h-full bg-white">
               {/* Chat Header */}
               <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-background to-white">

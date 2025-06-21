@@ -15,7 +15,9 @@ export interface ConnectionError {
     | "wallet"
     | "network"
     | "unknown"
-    | "cancelled";
+    | "cancelled"
+    | "not_installed"
+    | "authentication_failed";
   message: string;
   details?: string;
   cancelled?: boolean;

@@ -8,10 +8,15 @@ import SocialFeed from "./components/SocialFeed";
 import DetailedBios from "./components/DetailedBios";
 import ChatPanel from "./components/ChatPanel";
 import { WalletProvider } from "./context/WalletContext";
+import PostsPage from "./components/PostsPage";
+import InfluencersPage from "./components/InfluencersPage";
+import { X } from "lucide-react";
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isPostsOpen, setIsPostsOpen] = useState(false);
+  const [isInfluencersOpen, setIsInfluencersOpen] = useState(false);
   const [activeInfluencerId, setActiveInfluencerId] = useState<string>();
 
   const handleLoadingComplete = () => {
@@ -28,6 +33,14 @@ function App() {
     setActiveInfluencerId(undefined);
   };
 
+  const handlePostsOpen = () => {
+    setIsPostsOpen(true);
+  };
+
+  const handleInfluencersOpen = () => {
+    setIsInfluencersOpen(true);
+  };
+
   return (
     <WalletProvider>
       <div className="min-h-screen bg-background">
@@ -36,7 +49,11 @@ function App() {
             <LoadingScreen onComplete={handleLoadingComplete} />
           ) : (
             <>
-              <Header onChatOpen={() => handleChatOpen()} />
+              <Header
+                onChatOpen={() => handleChatOpen()}
+                onPostsOpen={handlePostsOpen}
+                onInfluencersOpen={handleInfluencersOpen}
+              />
 
               <main>
                 <HeroSection onInfluencerClick={handleChatOpen} />
@@ -50,6 +67,25 @@ function App() {
                 onClose={handleChatClose}
                 activeInfluencerId={activeInfluencerId}
               />
+
+              <PostsPage
+                isOpen={isPostsOpen}
+                onClose={() => setIsPostsOpen(false)}
+              />
+
+              <AnimatePresence>
+                {isInfluencersOpen && (
+                  <div className="fixed top-0 right-0 w-full h-full bg-background z-50 overflow-hidden">
+                    <InfluencersPage />
+                    <button
+                      onClick={() => setIsInfluencersOpen(false)}
+                      className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-all z-50"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+              </AnimatePresence>
 
               {/* Footer */}
               <footer className="bg-gradient-to-r from-foreground to-primary text-white py-16">
@@ -75,22 +111,6 @@ function App() {
                             className="hover:text-accent transition-colors"
                           >
                             AI Influencers
-                          </a>
-                        </li>
-                        <li>
-                          <a
-                            href="#"
-                            className="hover:text-accent transition-colors"
-                          >
-                            Analytics
-                          </a>
-                        </li>
-                        <li>
-                          <a
-                            href="#"
-                            className="hover:text-accent transition-colors"
-                          >
-                            Campaigns
                           </a>
                         </li>
                         <li>

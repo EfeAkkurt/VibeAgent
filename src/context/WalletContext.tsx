@@ -95,59 +95,139 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({
     checkInitialWalletStatus();
   }, [checkInitialWalletStatus]);
 
-  // Connect to wallet with proper state management
   const connectWallet = useCallback(
     async (username = "user") => {
-      // Prevent multiple simultaneous connections
-      if (isConnecting) {
-        console.log("Connection already in progress");
-        return;
-      }
+      if (isConnecting) return;
+
+      setIsConnecting(true);
+      setError(null);
+      setLastConnectionAttempt(username);
 
       try {
-        setIsConnecting(true);
-        setError(null);
-        setLastConnectionAttempt(username);
-
-        console.log("Starting wallet connection...");
-
-        const result = await FreighterService.connect(username);
-
-        if (result.error) {
-          console.error("Connection failed:", result.error);
-          setError(result.error);
-
-          // Don't set as connected if user cancelled
-          if (result.error.cancelled) {
-            console.log("User cancelled connection");
-            return;
-          }
-
+        console.log("[WalletContext] Starting wallet connection flow.");
+        const isFreighterInstalled =
+          await FreighterService.isFreighterInstalled();
+        if (!isFreighterInstalled) {
+          console.log("[WalletContext] Freighter not installed.");
+          setError({
+            type: "not_installed",
+            message: "Freighter wallet is not installed.",
+          });
+          setIsConnecting(false);
           return;
         }
 
-        // Success
-        console.log("Successfully connected to wallet:", result.address);
-        setPublicKey(result.address);
-        setIsWalletConnected(true);
-        localStorage.setItem("walletConnected", "true");
+        let authSuccess = false;
+        let authCancelled = false;
+        let usedAuthMethod: string | null = null;
 
-        // Update authentication status
-        const method = BiometricService.getPreferredAuthMethod();
-        setAuthMethod(method);
-        setBiometricVerified(method === "biometric");
-      } catch (error) {
-        console.error("Unexpected error connecting to wallet:", error);
+        console.log(
+          `[WalletContext] Biometric support status: ${biometricSupported}`
+        );
+        if (biometricSupported) {
+          console.log("[WalletContext] Attempting biometric authentication...");
+          const bioAuthResult = await BiometricService.authenticate(username);
+
+          if (bioAuthResult.success) {
+            console.log("[WalletContext] Biometric authentication successful.");
+            authSuccess = true;
+            usedAuthMethod = "biometric";
+          } else {
+            console.error(
+              "[WalletContext] Biometric authentication failed:",
+              bioAuthResult.error
+            );
+            if (bioAuthResult.cancelled) {
+              console.log("[WalletContext] Biometric auth cancelled by user.");
+              authCancelled = true;
+            } else {
+              // Fallback to password if biometrics fail for a reason other than cancellation
+              console.log(
+                "[WalletContext] Falling back to password authentication..."
+              );
+              const passwordAuthResult =
+                await BiometricService.authenticateWithPassword(username);
+              if (passwordAuthResult.success) {
+                console.log(
+                  "[WalletContext] Password authentication successful."
+                );
+                authSuccess = true;
+                usedAuthMethod = "password";
+              } else if (passwordAuthResult.cancelled) {
+                console.log("[WalletContext] Password auth cancelled by user.");
+                authCancelled = true;
+              }
+            }
+          }
+        } else {
+          console.log(
+            "[WalletContext] Biometrics not supported, proceeding with default connection."
+          );
+          // If biometrics are not supported, we can treat it as a success
+          // to proceed to the freighter connection logic.
+          authSuccess = true;
+          usedAuthMethod = "freighter_default";
+        }
+
+        if (authCancelled) {
+          console.log("[WalletContext] Auth cancelled. Aborting connection.");
+          setError({
+            type: "cancelled",
+            message: "Authentication was cancelled by the user.",
+          });
+          setIsConnecting(false);
+          return;
+        }
+
+        if (!authSuccess) {
+          console.log("[WalletContext] Auth failed. Aborting connection.");
+          setError({
+            type: "authentication_failed",
+            message: "Could not authenticate user.",
+          });
+          setIsConnecting(false);
+          return;
+        }
+
+        console.log(
+          "[WalletContext] Proceeding with Freighter wallet connection..."
+        );
+        const freighterResult = await FreighterService.connect(username);
+
+        if (freighterResult.address) {
+          setPublicKey(freighterResult.address);
+          setIsWalletConnected(true);
+          setAuthMethod(
+            usedAuthMethod ?? BiometricService.getPreferredAuthMethod()
+          );
+          setBiometricVerified(usedAuthMethod === "biometric");
+          localStorage.setItem("walletConnected", "true");
+          console.log(
+            "[WalletContext] Wallet connected successfully:",
+            freighterResult.address
+          );
+        } else if (freighterResult.error) {
+          setError(freighterResult.error);
+          console.error(
+            "[WalletContext] Freighter connection failed:",
+            freighterResult.error
+          );
+        }
+      } catch (err) {
+        console.error(
+          "[WalletContext] Unexpected error during wallet connection:",
+          err
+        );
         setError({
           type: "unknown",
-          message: "Unexpected error occurred while connecting to wallet",
-          details: error instanceof Error ? error.message : String(error),
+          message: "An unexpected error occurred.",
+          details: err instanceof Error ? err.message : String(err),
         });
       } finally {
         setIsConnecting(false);
       }
     },
-    [isConnecting]
+    [isConnecting, biometricSupported]
   );
 
   // Retry connection with same parameters

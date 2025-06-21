@@ -5,11 +5,9 @@ import {
   Wallet,
   MessageCircle,
   Image,
-  Megaphone,
   Users,
   Search,
   Home,
-  TrendingUp,
   Bot,
   AlertCircle,
   Fingerprint,
@@ -20,9 +18,15 @@ import { useWallet } from "../context/WalletContext";
 
 interface HeaderProps {
   onChatOpen: () => void;
+  onPostsOpen: () => void;
+  onInfluencersOpen: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onChatOpen }) => {
+const Header: React.FC<HeaderProps> = ({
+  onChatOpen,
+  onPostsOpen,
+  onInfluencersOpen,
+}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [username, setUsername] = useState("");
@@ -63,10 +67,8 @@ const Header: React.FC<HeaderProps> = ({ onChatOpen }) => {
   const menuItems = [
     { icon: Home, label: "Home", href: "#home" },
     { icon: MessageCircle, label: "Chat", action: onChatOpen },
-    { icon: Image, label: "Posts", href: "#posts" },
-    { icon: Megaphone, label: "Campaigns", href: "#campaigns" },
-    { icon: Users, label: "Influencers", href: "#influencers" },
-    { icon: TrendingUp, label: "Analytics", href: "#analytics" },
+    { icon: Image, label: "Posts", action: onPostsOpen },
+    { icon: Users, label: "Influencers", action: onInfluencersOpen },
   ];
 
   return (
