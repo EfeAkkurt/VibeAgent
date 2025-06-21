@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   MessageCircle,
   ChevronRight,
+  ChevronLeft,
   Users,
   TrendingUp,
   Award,
@@ -14,6 +15,83 @@ interface DetailedBiosProps {
 }
 
 const DetailedBios: React.FC<DetailedBiosProps> = ({ onChatClick }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Function to scroll to the next card
+  const scrollNext = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: 400, behavior: "smooth" });
+    }
+  };
+
+  // Function to scroll to the previous card
+  const scrollPrev = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: -400, behavior: "smooth" });
+    }
+  };
+
+  // Auto-scroll animation
+  useEffect(() => {
+    let animationId: number;
+    let direction = 1;
+    let isPaused = false;
+
+    const startAutoScroll = () => {
+      if (scrollRef.current) {
+        const container = scrollRef.current;
+        const maxScroll = container.scrollWidth - container.clientWidth;
+
+        const autoScroll = () => {
+          if (!isPaused && container) {
+            // Change direction when reaching the end
+            if (container.scrollLeft >= maxScroll - 10) {
+              direction = -1;
+            } else if (container.scrollLeft <= 10) {
+              direction = 1;
+            }
+
+            container.scrollLeft += direction * 0.5; // Slow scroll speed
+          }
+          animationId = requestAnimationFrame(autoScroll);
+        };
+
+        animationId = requestAnimationFrame(autoScroll);
+      }
+    };
+
+    // Start the animation
+    startAutoScroll();
+
+    // Pause on hover or touch
+    if (scrollRef.current) {
+      const container = scrollRef.current;
+
+      const pauseScroll = () => {
+        isPaused = true;
+      };
+
+      const resumeScroll = () => {
+        isPaused = false;
+      };
+
+      container.addEventListener("mouseenter", pauseScroll);
+      container.addEventListener("mouseleave", resumeScroll);
+      container.addEventListener("touchstart", pauseScroll);
+      container.addEventListener("touchend", resumeScroll);
+
+      return () => {
+        cancelAnimationFrame(animationId);
+        container.removeEventListener("mouseenter", pauseScroll);
+        container.removeEventListener("mouseleave", resumeScroll);
+        container.removeEventListener("touchstart", pauseScroll);
+        container.removeEventListener("touchend", resumeScroll);
+      };
+    }
+
+    return () => cancelAnimationFrame(animationId);
+  }, []);
+
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
       case "legendary":
@@ -63,147 +141,151 @@ const DetailedBios: React.FC<DetailedBiosProps> = ({ onChatClick }) => {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {aiInfluencers.map((influencer, index) => (
-            <motion.div
-              key={influencer.id}
-              initial={{ y: 100, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              transition={{ delay: index * 0.1, duration: 0.8 }}
-              viewport={{ once: true }}
-              className={`bg-white rounded-3xl shadow-xl hover:shadow-2xl ${getRarityGlow(
-                influencer.rarity
-              )} transition-all duration-500 overflow-hidden border border-gray-100 group`}
-            >
-              <div className="flex flex-col">
-                <div className="relative">
-                  <div
-                    className="absolute inset-0 bg-cover bg-center opacity-20"
-                    style={{ backgroundImage: `url(${influencer.avatar})` }}
-                  />
-                  <div className="bg-gradient-to-br from-primary/90 to-foreground/90 p-6 flex flex-col items-center justify-center relative min-h-[250px]">
-                    <div className="text-center">
-                      <div className="relative inline-block mb-4">
-                        <motion.img
-                          whileHover={{ scale: 1.05 }}
-                          transition={{
-                            type: "spring",
-                            stiffness: 300,
-                            damping: 20,
-                          }}
-                          src={influencer.avatar}
-                          alt={influencer.name}
-                          className="w-24 h-24 rounded-2xl object-cover mx-auto border-4 border-white/30 shadow-xl"
-                        />
+        <div className="relative">
+          <div
+            ref={scrollRef}
+            className="flex overflow-x-auto overflow-y-hidden space-x-8 pb-8 scrollbar-hide"
+          >
+            {aiInfluencers.map((influencer, index) => (
+              <motion.div
+                key={influencer.id}
+                initial={{ y: 100, opacity: 0 }}
+                whileInView={{ y: 0, opacity: 1 }}
+                transition={{ delay: index * 0.1, duration: 0.8 }}
+                viewport={{ once: true }}
+                className="flex-shrink-0 w-96"
+              >
+                <div
+                  className={`bg-white rounded-3xl shadow-xl hover:shadow-2xl ${getRarityGlow(
+                    influencer.rarity
+                  )} transition-all duration-500 overflow-hidden border border-gray-100 group h-full`}
+                >
+                  <div className="flex flex-col h-full">
+                    <div className="relative">
+                      <img
+                        src={influencer.avatar}
+                        alt={influencer.name}
+                        className="w-full h-56 object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                      <div className="absolute bottom-0 left-0 right-0 p-6">
                         <div
-                          className={`absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold text-white bg-gradient-to-r ${getRarityColor(
+                          className={`inline-block px-2 py-1 rounded-full text-xs font-bold text-white bg-gradient-to-r ${getRarityColor(
                             influencer.rarity
-                          )} shadow-lg`}
+                          )} mb-2`}
                         >
                           {influencer.rarity.toUpperCase()}
                         </div>
-                      </div>
+                        <h3 className="font-poppins font-bold text-white text-xl mb-1">
+                          {influencer.name}
+                        </h3>
+                        <p className="text-white/80 text-sm font-inter">
+                          {influencer.category}
+                        </p>
 
-                      <h3 className="font-poppins font-bold text-white text-xl mb-1">
-                        {influencer.name}
-                      </h3>
-                      <p className="text-secondary text-sm mb-4">
-                        {influencer.category}
-                      </p>
-
-                      <div className="flex justify-center space-x-6 mb-4">
-                        <div className="text-center">
-                          <div className="flex items-center justify-center mb-1">
-                            <Users size={16} className="text-accent" />
+                        <div className="flex items-center space-x-4 mt-2 text-white/70 text-xs">
+                          <div className="flex items-center space-x-1">
+                            <Users size={12} />
+                            <span>{influencer.followers}</span>
                           </div>
-                          <p className="text-white font-bold text-sm">
-                            {influencer.followers}
-                          </p>
-                          <p className="text-secondary text-xs">Followers</p>
-                        </div>
-                        <div className="text-center">
-                          <div className="flex items-center justify-center mb-1">
-                            <TrendingUp size={16} className="text-accent" />
+                          <div className="flex items-center space-x-1">
+                            <TrendingUp size={12} />
+                            <span>{influencer.engagement}</span>
                           </div>
-                          <p className="text-white font-bold text-sm">
-                            {influencer.engagement}
-                          </p>
-                          <p className="text-secondary text-xs">Engagement</p>
                         </div>
                       </div>
+                    </div>
 
-                      <div className="flex items-center justify-center space-x-2">
-                        <div
-                          className={`w-3 h-3 rounded-full ${
-                            influencer.isOnline ? "bg-green-500" : "bg-gray-400"
-                          } shadow-lg`}
-                        />
-                        <p className="text-secondary text-xs">
-                          {influencer.isOnline
-                            ? "Online Now"
-                            : "Last seen recently"}
+                    <div className="p-6 flex-1 flex flex-col">
+                      <div className="mb-4 flex-1">
+                        <h4 className="font-poppins font-bold text-primary text-lg mb-2">
+                          About
+                        </h4>
+                        <p className="text-foreground font-inter text-sm leading-relaxed mb-4 line-clamp-3">
+                          {influencer.bio}
                         </p>
                       </div>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="p-6">
-                  <div className="mb-4">
-                    <h4 className="font-poppins font-bold text-primary text-lg mb-2">
-                      About
-                    </h4>
-                    <p className="text-foreground font-inter text-sm leading-relaxed mb-4 line-clamp-3">
-                      {influencer.bio}
-                    </p>
-                  </div>
+                      {/* Tags */}
+                      <div className="mb-4">
+                        <h5 className="font-poppins font-semibold text-primary text-sm mb-2">
+                          Expertise
+                        </h5>
+                        <div className="flex flex-wrap gap-1">
+                          {influencer.tags.slice(0, 3).map((tag, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 bg-accent/10 text-accent text-xs font-medium rounded-full border border-accent/20"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                          {influencer.tags.length > 3 && (
+                            <span className="px-2 py-1 bg-gray-100 text-secondary text-xs font-medium rounded-full">
+                              +{influencer.tags.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
-                  {/* Tags */}
-                  <div className="mb-4">
-                    <h5 className="font-poppins font-semibold text-primary text-sm mb-2">
-                      Expertise
-                    </h5>
-                    <div className="flex flex-wrap gap-1">
-                      {influencer.tags.slice(0, 3).map((tag, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2 py-1 bg-accent/10 text-accent text-xs font-medium rounded-full border border-accent/20"
+                      <div className="flex flex-col gap-2 mt-auto">
+                        <motion.button
+                          onClick={() => onChatClick(influencer.id)}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-poppins font-semibold py-2 px-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 shadow-md hover:shadow-lg text-sm"
                         >
-                          #{tag}
-                        </span>
-                      ))}
-                      {influencer.tags.length > 3 && (
-                        <span className="px-2 py-1 bg-gray-100 text-secondary text-xs font-medium rounded-full">
-                          +{influencer.tags.length - 3}
-                        </span>
-                      )}
+                          <MessageCircle size={16} />
+                          <span>Start Chat</span>
+                        </motion.button>
+
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="w-full bg-transparent hover:bg-primary/5 text-primary font-poppins font-semibold py-2 px-4 rounded-xl border border-primary/20 hover:border-primary/40 transition-all duration-300 flex items-center justify-center space-x-2 text-sm"
+                        >
+                          <span>Read More</span>
+                          <ChevronRight size={16} />
+                        </motion.button>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="flex flex-col gap-2">
-                    <motion.button
-                      onClick={() => onChatClick(influencer.id)}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-poppins font-semibold py-2 px-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 shadow-md hover:shadow-lg text-sm"
-                    >
-                      <MessageCircle size={16} />
-                      <span>Start Chat</span>
-                    </motion.button>
-
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full bg-transparent hover:bg-primary/5 text-primary font-poppins font-semibold py-2 px-4 rounded-xl border border-primary/20 hover:border-primary/40 transition-all duration-300 flex items-center justify-center space-x-2 text-sm"
-                    >
-                      <span>Read More</span>
-                      <ChevronRight size={16} />
-                    </motion.button>
-                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-4">
+            <motion.button
+              onClick={scrollPrev}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="bg-white/80 backdrop-blur-sm p-3 rounded-full shadow-lg hover:bg-white transition-all duration-300"
+            >
+              <ChevronLeft size={24} className="text-primary" />
+            </motion.button>
+          </div>
+          <div className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-4">
+            <motion.button
+              onClick={scrollNext}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="bg-white/80 backdrop-blur-sm p-3 rounded-full shadow-lg hover:bg-white transition-all duration-300"
+            >
+              <ChevronRight size={24} className="text-primary" />
+            </motion.button>
+          </div>
+
+          {/* Scroll Indicators */}
+          <div className="flex justify-center mt-8 space-x-2">
+            {aiInfluencers.map((_, index) => (
+              <div
+                key={index}
+                className="w-2 h-2 rounded-full bg-gray-300 hover:bg-accent transition-colors duration-300 cursor-pointer"
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>

@@ -1,20 +1,35 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import {
-  MessageCircle,
-  Users,
-  TrendingUp,
-  Star,
-  Clock,
-  Zap,
-} from "lucide-react";
-import { aiInfluencers } from "../data/influencers";
+import { MessageCircle, Users, ArrowRight, ArrowLeft, Zap } from "lucide-react";
+import { aiInfluencers } from "../data/mockData";
 
 interface InfluencerCardsProps {
   onChatClick: (influencerId: string) => void;
 }
 
 const InfluencerCards: React.FC<InfluencerCardsProps> = ({ onChatClick }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const cardsPerView = 3; // Number of cards to show at once
+  const carouselRef = useRef<HTMLDivElement>(null);
+
+  // Calculate the maximum index for navigation
+  const maxIndex = Math.max(0, aiInfluencers.length - cardsPerView);
+
+  // Handle next button click
+  const handleNext = () => {
+    if (currentIndex < maxIndex) {
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
+  // Handle previous button click
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
+
+  // Get rarity color
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
       case "legendary":
@@ -25,19 +40,6 @@ const InfluencerCards: React.FC<InfluencerCardsProps> = ({ onChatClick }) => {
         return "from-blue-400 to-cyan-500";
       default:
         return "from-gray-400 to-gray-600";
-    }
-  };
-
-  const getRarityGlow = (rarity: string) => {
-    switch (rarity) {
-      case "legendary":
-        return "shadow-yellow-500/30";
-      case "epic":
-        return "shadow-purple-500/30";
-      case "rare":
-        return "shadow-blue-500/30";
-      default:
-        return "shadow-gray-500/30";
     }
   };
 
@@ -70,168 +72,152 @@ const InfluencerCards: React.FC<InfluencerCardsProps> = ({ onChatClick }) => {
           </p>
         </motion.div>
 
-        {/* Horizontal Scrolling Cards */}
-        <div className="relative">
-          <div className="flex overflow-x-auto overflow-y-hidden space-x-8 pb-8 scrollbar-hide">
-            {aiInfluencers.map((influencer, index) => (
+        <div className="flex justify-between items-center mb-12">
+          <div>
+            <h2 className="text-3xl md:text-4xl font-poppins font-bold text-foreground">
+              Meet Our AI Creators
+            </h2>
+            <p className="text-secondary mt-2 max-w-2xl">
+              Connect with our diverse roster of AI influencers specializing in
+              different areas of Web3 and digital marketing.
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <motion.button
+              onClick={handlePrevious}
+              disabled={currentIndex === 0}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`p-3 rounded-full ${
+                currentIndex === 0
+                  ? "bg-gray-100 text-gray-400"
+                  : "bg-gray-200 hover:bg-gray-300 text-foreground"
+              } transition-all duration-300`}
+            >
+              <ArrowLeft size={20} />
+            </motion.button>
+            <motion.button
+              onClick={handleNext}
+              disabled={currentIndex === maxIndex}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`p-3 rounded-full ${
+                currentIndex === maxIndex
+                  ? "bg-gray-100 text-gray-400"
+                  : "bg-gray-200 hover:bg-gray-300 text-foreground"
+              } transition-all duration-300`}
+            >
+              <ArrowRight size={20} />
+            </motion.button>
+          </div>
+        </div>
+
+        <div className="relative overflow-hidden">
+          <motion.div
+            ref={carouselRef}
+            className="flex space-x-6"
+            animate={{
+              x: `-${currentIndex * (100 / cardsPerView)}%`,
+            }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          >
+            {aiInfluencers.map((influencer) => (
               <motion.div
                 key={influencer.id}
-                initial={{ y: 100, opacity: 0 }}
-                whileInView={{ y: 0, opacity: 1 }}
-                transition={{ delay: index * 0.1, duration: 0.6 }}
-                viewport={{ once: true }}
-                className="flex-shrink-0 w-96 group"
+                className="w-full md:w-1/3 flex-shrink-0"
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
-                <div
-                  className={`bg-white rounded-3xl shadow-xl hover:shadow-2xl ${getRarityGlow(
-                    influencer.rarity
-                  )} transition-all duration-500 overflow-hidden border border-gray-100 group-hover:border-accent/20 relative`}
-                >
-                  {/* Rarity Glow Effect */}
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-br ${getRarityColor(
-                      influencer.rarity
-                    )} opacity-0 group-hover:opacity-5 transition-opacity duration-500`}
-                  ></div>
-
-                  {/* Card Header with Background */}
-                  <div className="relative h-56 overflow-hidden">
-                    <div
-                      className="absolute inset-0 bg-cover bg-center scale-110 group-hover:scale-125 transition-transform duration-700"
-                      style={{
-                        backgroundImage: `url(${influencer.avatar})`,
-                        filter: "blur(20px) brightness(0.3)",
-                      }}
+                <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 h-full flex flex-col">
+                  {/* Card Header with Image */}
+                  <div className="relative h-64 overflow-hidden">
+                    <img
+                      src={influencer.avatar}
+                      alt={influencer.name}
+                      className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-primary/60 to-accent/80"></div>
-
-                    {/* Profile Section */}
-                    <div className="relative p-6 h-full flex items-end">
-                      <div className="flex items-center space-x-4 w-full">
-                        <div className="relative">
-                          <motion.img
-                            whileHover={{ scale: 1.1 }}
-                            transition={{
-                              type: "spring",
-                              stiffness: 300,
-                              damping: 20,
-                            }}
-                            src={influencer.avatar}
-                            alt={influencer.name}
-                            className="w-20 h-20 rounded-2xl object-cover border-4 border-white/30 shadow-lg"
-                          />
-                          <div
-                            className={`absolute -bottom-2 -right-2 w-6 h-6 rounded-full border-3 border-white ${
-                              influencer.isOnline
-                                ? "bg-green-500"
-                                : "bg-gray-400"
-                            } shadow-lg`}
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <div
-                            className={`inline-block px-2 py-1 rounded-full text-xs font-bold text-white bg-gradient-to-r ${getRarityColor(
-                              influencer.rarity
-                            )} mb-2`}
-                          >
-                            {influencer.rarity.toUpperCase()}
-                          </div>
-                          <h3 className="font-poppins font-bold text-white text-xl mb-1">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <div className="flex justify-between items-end">
+                        <div>
+                          <h3 className="text-white font-poppins font-bold text-xl">
                             {influencer.name}
                           </h3>
-                          <p className="text-white/80 text-sm font-inter mb-2">
+                          <p className="text-white/80 text-sm">
                             {influencer.category}
                           </p>
-                          <div className="flex items-center space-x-4 text-white/70 text-xs">
-                            <div className="flex items-center space-x-1">
-                              <Users size={12} />
-                              <span>{influencer.followers}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <TrendingUp size={12} />
-                              <span>{influencer.engagement}</span>
-                            </div>
-                          </div>
+                        </div>
+                        <div
+                          className={`px-3 py-1 rounded-full text-xs font-bold text-white bg-gradient-to-r ${getRarityColor(
+                            influencer.rarity
+                          )}`}
+                        >
+                          {influencer.rarity.toUpperCase()}
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Card Content */}
-                  <div className="p-6 relative">
-                    <p className="text-foreground font-inter mb-6 line-clamp-3 leading-relaxed">
+                  <div className="p-6 flex-1 flex flex-col">
+                    <p className="text-secondary line-clamp-3 mb-6 flex-1">
                       {influencer.bio}
                     </p>
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="bg-gray-50 rounded-xl p-3 text-center">
-                        <div className="flex items-center justify-center mb-1">
-                          <Star size={16} className="text-accent" />
+                    <div className="flex items-center justify-between mt-auto">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex flex-col">
+                          <span className="text-xs text-secondary">
+                            Followers
+                          </span>
+                          <span className="font-semibold text-foreground">
+                            {influencer.followers}
+                          </span>
                         </div>
-                        <p className="text-sm font-semibold text-primary">
-                          {influencer.stats.satisfaction}
-                        </p>
-                        <p className="text-xs text-secondary">Satisfaction</p>
+                        <div className="flex flex-col">
+                          <span className="text-xs text-secondary">
+                            Engagement
+                          </span>
+                          <span className="font-semibold text-foreground">
+                            {influencer.engagement}
+                          </span>
+                        </div>
                       </div>
-                      <div className="bg-gray-50 rounded-xl p-3 text-center">
-                        <div className="flex items-center justify-center mb-1">
-                          <Clock size={16} className="text-accent" />
-                        </div>
-                        <p className="text-sm font-semibold text-primary">
-                          {influencer.stats.responseTime}
-                        </p>
-                        <p className="text-xs text-secondary">Response</p>
+                      <div className="flex space-x-2">
+                        <motion.button
+                          onClick={() => onChatClick(influencer.id)}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="p-3 rounded-xl bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white transition-all duration-300"
+                        >
+                          <MessageCircle size={20} />
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="p-3 rounded-xl bg-gray-100 hover:bg-gray-200 transition-all duration-300"
+                        >
+                          <Users size={20} className="text-secondary" />
+                        </motion.button>
                       </div>
                     </div>
-
-                    {/* Tags */}
-                    <div className="mb-6">
-                      <h4 className="font-poppins font-semibold text-primary text-sm mb-3">
-                        Specialties
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {influencer.tags.slice(0, 3).map((tag, idx) => (
-                          <span
-                            key={idx}
-                            className="px-3 py-1 bg-accent/10 text-accent text-xs font-medium rounded-full border border-accent/20"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                        {influencer.tags.length > 3 && (
-                          <span className="px-3 py-1 bg-gray-100 text-secondary text-xs font-medium rounded-full">
-                            +{influencer.tags.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Action Button */}
-                    <motion.button
-                      onClick={() => onChatClick(influencer.id)}
-                      whileHover={{ scale: 1.02, y: -2 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-poppins font-semibold py-4 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center space-x-3 shadow-lg hover:shadow-xl"
-                    >
-                      <MessageCircle size={20} />
-                      <span>Start Conversation</span>
-                    </motion.button>
                   </div>
                 </div>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
+        </div>
 
-          {/* Scroll Indicators */}
-          <div className="flex justify-center mt-8 space-x-2">
-            {aiInfluencers.map((_, index) => (
-              <div
-                key={index}
-                className="w-2 h-2 rounded-full bg-gray-300 hover:bg-accent transition-colors duration-300 cursor-pointer"
-              />
-            ))}
-          </div>
+        {/* Mobile Navigation Dots */}
+        <div className="flex justify-center mt-8 md:hidden">
+          {Array.from({ length: maxIndex + 1 }).map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentIndex(index)}
+              className={`w-2 h-2 mx-1 rounded-full ${
+                currentIndex === index ? "bg-primary" : "bg-gray-300"
+              }`}
+            ></button>
+          ))}
         </div>
       </div>
     </section>
