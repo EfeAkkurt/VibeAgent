@@ -6,10 +6,20 @@ export interface AuthenticationOptions {
   userVerification?: "required" | "preferred" | "discouraged";
 }
 
+export interface BiometricCredential {
+  id: string;
+  username: string;
+  created: number;
+}
+
 export class BiometricService {
-  // Check if WebAuthn is supported by the browser
+  private static readonly CREDENTIAL_KEY = "biometricCredentialId";
+  private static readonly AUTH_METHOD_KEY = "authMethod";
+  private static readonly SESSION_KEY = "biometricSession";
+
+  // Check if WebAuthn is supported
   static isWebAuthnSupported(): boolean {
-    return window && !!window.PublicKeyCredential;
+    return !!(window?.PublicKeyCredential && navigator?.credentials);
   }
 
   // Check if platform authenticator (biometrics) is available
@@ -26,31 +36,55 @@ export class BiometricService {
     }
   }
 
-  // Register a new biometric credential
+  // Check if user has fingerprint sensor
+  static async hasFingerprint(): Promise<boolean> {
+    try {
+      // Check if Touch ID (iOS), Face ID, or Windows Hello is available
+      const available = await this.isBiometricAvailable();
+      if (!available) return false;
+
+      // Additional check for platform-specific biometrics
+      if ("ontouchstart" in window) {
+        // Mobile device - likely has fingerprint or face unlock
+        return true;
+      }
+
+      // Desktop - check for Windows Hello or similar
+      return available;
+    } catch {
+      return false;
+    }
+  }
+
+  // Register new biometric credential with proper error handling
   static async register(
     username: string,
     options?: AuthenticationOptions
-  ): Promise<boolean> {
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    credentialId?: string;
+  }> {
     if (!this.isWebAuthnSupported()) {
-      console.error("WebAuthn is not supported in this browser");
-      return false;
+      return {
+        success: false,
+        error: "WebAuthn not supported in this browser",
+      };
     }
 
     try {
-      // Generate a random challenge
       const challenge = new Uint8Array(32);
-      window.crypto.getRandomValues(challenge);
+      crypto.getRandomValues(challenge);
 
-      // Create credential creation options
       const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions =
         {
           challenge,
           rp: {
-            name: "VibeAgency",
+            name: "VibeAgency Wallet",
             id: window.location.hostname,
           },
           user: {
-            id: Uint8Array.from(username, (c) => c.charCodeAt(0)),
+            id: new TextEncoder().encode(username),
             name: username,
             displayName: username,
           },
@@ -60,103 +94,183 @@ export class BiometricService {
           ],
           timeout: options?.timeout || 60000,
           authenticatorSelection: {
-            authenticatorAttachment: "platform", // Use platform authenticator (like Touch ID, Face ID, Windows Hello)
-            userVerification: options?.userVerification || "preferred",
+            authenticatorAttachment: "platform",
+            userVerification: options?.userVerification || "required",
             requireResidentKey: false,
           },
           attestation: "none",
         };
 
-      // Create the credential
-      const credential = await navigator.credentials.create({
+      const credential = (await navigator.credentials.create({
         publicKey: publicKeyCredentialCreationOptions,
-      });
+      })) as PublicKeyCredential;
 
       if (credential) {
-        // Store credential ID in localStorage for future authentication
+        const credentialData: BiometricCredential = {
+          id: Array.from(new Uint8Array(credential.rawId))
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join(""),
+          username,
+          created: Date.now(),
+        };
+
         localStorage.setItem(
-          "biometricCredentialId",
-          JSON.stringify({
-            id: (credential as PublicKeyCredential).rawId,
-            username,
-          })
+          this.CREDENTIAL_KEY,
+          JSON.stringify(credentialData)
         );
-        localStorage.setItem("authMethod", "biometric");
-        return true;
+        localStorage.setItem(this.AUTH_METHOD_KEY, "biometric");
+
+        return { success: true, credentialId: credentialData.id };
       }
 
-      return false;
-    } catch (error) {
+      return { success: false, error: "Failed to create credential" };
+    } catch (error: unknown) {
       console.error("Error registering biometric credential:", error);
-      return false;
+
+      const err = error as Error;
+      if (err.name === "NotAllowedError") {
+        return {
+          success: false,
+          error: "User cancelled biometric registration",
+        };
+      } else if (err.name === "InvalidStateError") {
+        return { success: false, error: "Biometric credential already exists" };
+      } else if (err.name === "NotSupportedError") {
+        return {
+          success: false,
+          error: "Biometric authentication not supported",
+        };
+      }
+
+      return { success: false, error: "Biometric registration failed" };
     }
   }
 
-  // Authenticate using biometrics
+  // Authenticate with biometrics - with proper user cancellation handling
   static async authenticate(
     username: string,
     options?: AuthenticationOptions
-  ): Promise<boolean> {
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    cancelled?: boolean;
+  }> {
     if (!this.isWebAuthnSupported()) {
-      console.error("WebAuthn is not supported in this browser");
-      return false;
+      return { success: false, error: "WebAuthn not supported" };
     }
 
     try {
-      // Generate a random challenge
-      const challenge = new Uint8Array(32);
-      window.crypto.getRandomValues(challenge);
+      // Get stored credential
+      const storedCredential = localStorage.getItem(this.CREDENTIAL_KEY);
+      if (!storedCredential) {
+        // Try to register first
+        const registerResult = await this.register(username, options);
+        if (!registerResult.success) {
+          return { success: false, error: registerResult.error };
+        }
+      }
 
-      // Create credential request options
+      const challenge = new Uint8Array(32);
+      crypto.getRandomValues(challenge);
+
       const publicKeyCredentialRequestOptions: PublicKeyCredentialRequestOptions =
         {
           challenge,
-          timeout: options?.timeout || 60000,
-          userVerification: options?.userVerification || "preferred",
+          timeout: options?.timeout || 30000,
+          userVerification: options?.userVerification || "required",
           rpId: window.location.hostname,
         };
 
-      // Get the credential
       const credential = await navigator.credentials.get({
         publicKey: publicKeyCredentialRequestOptions,
       });
 
       if (credential) {
-        // Store authentication method preference
-        localStorage.setItem("authMethod", "biometric");
-        return true;
+        localStorage.setItem(this.AUTH_METHOD_KEY, "biometric");
+        localStorage.setItem(this.SESSION_KEY, Date.now().toString());
+        return { success: true };
       }
 
-      return false;
-    } catch (error) {
+      return { success: false, error: "Authentication failed" };
+    } catch (error: unknown) {
       console.error("Error authenticating with biometrics:", error);
-      return false;
+
+      const err = error as Error;
+      if (err.name === "NotAllowedError") {
+        return {
+          success: false,
+          error: "User cancelled biometric authentication",
+          cancelled: true,
+        };
+      } else if (err.name === "InvalidStateError") {
+        return { success: false, error: "Invalid biometric state" };
+      }
+
+      return { success: false, error: "Biometric authentication failed" };
     }
   }
 
-  // Authenticate using device password/PIN
-  static async authenticateWithPassword(username: string): Promise<boolean> {
+  // Device password authentication simulation
+  static async authenticateWithPassword(username: string): Promise<{
+    success: boolean;
+    error?: string;
+    cancelled?: boolean;
+  }> {
     try {
-      // For demonstration purposes, we're simulating password authentication
-      // In a real implementation, this would use a secure method for password verification
+      // Store username for association with the session
+      const storedUsername = username || "user";
 
-      // Here we're just storing the preference
-      localStorage.setItem("authMethod", "password");
-      return true;
+      // Simulate device password prompt
+      const password = prompt("Please enter your device password:");
+
+      if (password === null) {
+        return {
+          success: false,
+          error: "User cancelled password authentication",
+          cancelled: true,
+        };
+      }
+
+      if (password === "") {
+        return { success: false, error: "Password cannot be empty" };
+      }
+
+      // In real implementation, this would verify against device password
+      // For demo purposes, any non-empty password is considered valid
+      localStorage.setItem(this.AUTH_METHOD_KEY, "password");
+      localStorage.setItem(this.SESSION_KEY, Date.now().toString());
+
+      // Store the username associated with this session
+      localStorage.setItem("authUsername", storedUsername);
+
+      return { success: true };
     } catch (error) {
       console.error("Error authenticating with password:", error);
-      return false;
+      return { success: false, error: "Password authentication failed" };
     }
   }
 
-  // Get the preferred authentication method
+  // Get preferred authentication method
   static getPreferredAuthMethod(): string | null {
-    return localStorage.getItem("authMethod");
+    return localStorage.getItem(this.AUTH_METHOD_KEY);
+  }
+
+  // Check if session is still valid (optional - for security)
+  static isSessionValid(): boolean {
+    const session = localStorage.getItem(this.SESSION_KEY);
+    if (!session) return false;
+
+    const sessionTime = parseInt(session);
+    const now = Date.now();
+    const maxAge = 30 * 60 * 1000; // 30 minutes
+
+    return now - sessionTime < maxAge;
   }
 
   // Clear authentication data
   static clearAuthData(): void {
-    localStorage.removeItem("biometricCredentialId");
-    localStorage.removeItem("authMethod");
+    localStorage.removeItem(this.CREDENTIAL_KEY);
+    localStorage.removeItem(this.AUTH_METHOD_KEY);
+    localStorage.removeItem(this.SESSION_KEY);
   }
 }

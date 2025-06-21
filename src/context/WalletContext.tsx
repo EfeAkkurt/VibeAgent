@@ -1,4 +1,10 @@
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+} from "react";
 import {
   FreighterService,
   ConnectionError,
@@ -16,6 +22,7 @@ interface WalletContextType {
   connectWallet: (username?: string) => Promise<void>;
   disconnectWallet: () => Promise<void>;
   clearError: () => void;
+  retryConnection: () => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -40,102 +47,130 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({
   );
   const [biometricVerified, setBiometricVerified] = useState(false);
   const [authMethod, setAuthMethod] = useState<string | null>(null);
+  const [lastConnectionAttempt, setLastConnectionAttempt] =
+    useState<string>("");
 
-  // Check wallet connection on mount
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      try {
-        // Check if Freighter is installed
-        const isInstalled = await FreighterService.isFreighterInstalled();
-        if (!isInstalled) {
-          console.log("Freighter wallet is not installed");
-          return;
-        }
-
-        const connected = await FreighterService.isConnected();
-        if (connected) {
-          // Check if already verified
-          const storedVerification = localStorage.getItem("walletConnected");
-          if (storedVerification === "true") {
-            try {
-              const result = await FreighterService.connect();
-              if (result.error) {
-                console.error("Error reconnecting to wallet:", result.error);
-                return;
-              }
-
-              setPublicKey(result.address);
-              setIsWalletConnected(true);
-              setBiometricVerified(true);
-
-              // Set authentication method
-              const method = BiometricService.getPreferredAuthMethod();
-              setAuthMethod(method);
-            } catch (error) {
-              console.error("Error reconnecting to wallet:", error);
-            }
-          }
-        }
-
-        // Check if biometrics are supported
-        const biometricSupport = await FreighterService.isBiometricSupported();
-        setBiometricSupported(biometricSupport);
-      } catch (error) {
-        console.error("Error checking wallet connection:", error);
-      }
-    };
-
-    checkWalletConnection();
-  }, []);
-
-  // Connect to wallet
-  const connectWallet = async (username?: string) => {
+  // Check initial wallet status
+  const checkInitialWalletStatus = useCallback(async () => {
     try {
-      setIsConnecting(true);
-      setError(null);
-
-      const result = await FreighterService.connect(username);
-
-      if (result.error) {
-        setError(result.error);
-        setIsConnecting(false);
+      // Check Freighter installation
+      const isInstalled = await FreighterService.isFreighterInstalled();
+      if (!isInstalled) {
+        console.log("Freighter wallet is not installed");
         return;
       }
 
-      setPublicKey(result.address);
-      setIsWalletConnected(true);
-      localStorage.setItem("walletConnected", "true");
+      // Check if previously connected and session valid
+      const storedConnection = localStorage.getItem("walletConnected");
+      const sessionValid = BiometricService.isSessionValid();
 
-      // Update authentication method
-      const method = BiometricService.getPreferredAuthMethod();
-      setAuthMethod(method);
-      setBiometricVerified(method === "biometric");
+      if (storedConnection === "true" && sessionValid) {
+        try {
+          const publicKey = await FreighterService.getPublicKey();
+          if (publicKey) {
+            setPublicKey(publicKey);
+            setIsWalletConnected(true);
+            setBiometricVerified(true);
 
-      // Log success
-      console.log("Successfully connected to wallet:", result.address);
+            const method = BiometricService.getPreferredAuthMethod();
+            setAuthMethod(method);
+          }
+        } catch (error) {
+          console.error("Error reconnecting to wallet:", error);
+          // Clear invalid connection
+          localStorage.removeItem("walletConnected");
+          BiometricService.clearAuthData();
+        }
+      }
+
+      // Check biometric support
+      const biometricSupport = await BiometricService.isBiometricAvailable();
+      setBiometricSupported(biometricSupport);
     } catch (error) {
-      console.error("Error connecting to wallet:", error);
-      setError({
-        type: "unknown",
-        message:
-          "Error connecting to wallet. Please make sure Freighter is installed and unlocked.",
-        details: error instanceof Error ? error.message : String(error),
-      });
-    } finally {
-      setIsConnecting(false);
+      console.error("Error checking initial wallet status:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    checkInitialWalletStatus();
+  }, [checkInitialWalletStatus]);
+
+  // Connect to wallet with proper state management
+  const connectWallet = useCallback(
+    async (username = "user") => {
+      // Prevent multiple simultaneous connections
+      if (isConnecting) {
+        console.log("Connection already in progress");
+        return;
+      }
+
+      try {
+        setIsConnecting(true);
+        setError(null);
+        setLastConnectionAttempt(username);
+
+        console.log("Starting wallet connection...");
+
+        const result = await FreighterService.connect(username);
+
+        if (result.error) {
+          console.error("Connection failed:", result.error);
+          setError(result.error);
+
+          // Don't set as connected if user cancelled
+          if (result.error.cancelled) {
+            console.log("User cancelled connection");
+            return;
+          }
+
+          return;
+        }
+
+        // Success
+        console.log("Successfully connected to wallet:", result.address);
+        setPublicKey(result.address);
+        setIsWalletConnected(true);
+        localStorage.setItem("walletConnected", "true");
+
+        // Update authentication status
+        const method = BiometricService.getPreferredAuthMethod();
+        setAuthMethod(method);
+        setBiometricVerified(method === "biometric");
+      } catch (error) {
+        console.error("Unexpected error connecting to wallet:", error);
+        setError({
+          type: "unknown",
+          message: "Unexpected error occurred while connecting to wallet",
+          details: error instanceof Error ? error.message : String(error),
+        });
+      } finally {
+        setIsConnecting(false);
+      }
+    },
+    [isConnecting]
+  );
+
+  // Retry connection with same parameters
+  const retryConnection = useCallback(async () => {
+    if (lastConnectionAttempt) {
+      await connectWallet(lastConnectionAttempt);
+    } else {
+      await connectWallet();
+    }
+  }, [connectWallet, lastConnectionAttempt]);
 
   // Disconnect wallet
-  const disconnectWallet = async () => {
+  const disconnectWallet = useCallback(async () => {
     try {
       await FreighterService.disconnect();
       setPublicKey(null);
       setIsWalletConnected(false);
       setBiometricVerified(false);
       setAuthMethod(null);
+      setError(null);
+      setLastConnectionAttempt("");
       localStorage.removeItem("walletConnected");
-      console.log("Wallet disconnected");
+      console.log("Wallet disconnected successfully");
     } catch (error) {
       console.error("Error disconnecting wallet:", error);
       setError({
@@ -144,12 +179,12 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({
         details: error instanceof Error ? error.message : String(error),
       });
     }
-  };
+  }, []);
 
   // Clear error
-  const clearError = () => {
+  const clearError = useCallback(() => {
     setError(null);
-  };
+  }, []);
 
   const value = {
     isWalletConnected,
@@ -162,6 +197,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({
     connectWallet,
     disconnectWallet,
     clearError,
+    retryConnection,
   };
 
   return (

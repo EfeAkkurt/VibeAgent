@@ -38,6 +38,7 @@ const Header: React.FC<HeaderProps> = ({ onChatOpen }) => {
     connectWallet,
     disconnectWallet,
     clearError,
+    retryConnection,
   } = useWallet();
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -358,7 +359,15 @@ const Header: React.FC<HeaderProps> = ({ onChatOpen }) => {
                         )}
                       </div>
                     </div>
-                    <div className="mt-3 flex justify-end">
+                    <div className="mt-3 flex justify-end space-x-3">
+                      {!error.cancelled && (
+                        <button
+                          onClick={retryConnection}
+                          className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                        >
+                          Retry
+                        </button>
+                      )}
                       <button
                         onClick={clearError}
                         className="text-sm font-medium text-red-600 hover:text-red-800"

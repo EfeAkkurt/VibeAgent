@@ -52,6 +52,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     connectWallet,
     disconnectWallet,
     clearError,
+    retryConnection,
   } = useWallet();
 
   const currentInfluencer = aiInfluencers.find(
@@ -398,6 +399,45 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                   </motion.div>
                 )}
 
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-red-50 border border-red-200 text-red-600 rounded-xl p-4 mb-6"
+                  >
+                    <div className="flex items-start">
+                      <AlertCircle
+                        className="mr-3 mt-0.5 flex-shrink-0"
+                        size={18}
+                      />
+                      <div>
+                        <p className="font-medium">{error.message}</p>
+                        {error.details && (
+                          <p className="text-sm mt-1 text-red-500">
+                            {error.details}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-3 flex justify-end space-x-3">
+                      {!error.cancelled && (
+                        <button
+                          onClick={retryConnection}
+                          className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                        >
+                          Retry
+                        </button>
+                      )}
+                      <button
+                        onClick={clearError}
+                        className="text-sm font-medium text-red-600 hover:text-red-800"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
                 <div ref={messagesEndRef} />
               </div>
 
@@ -506,7 +546,15 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                         )}
                       </div>
                     </div>
-                    <div className="mt-3 flex justify-end">
+                    <div className="mt-3 flex justify-end space-x-3">
+                      {!error.cancelled && (
+                        <button
+                          onClick={retryConnection}
+                          className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                        >
+                          Retry
+                        </button>
+                      )}
                       <button
                         onClick={clearError}
                         className="text-sm font-medium text-red-600 hover:text-red-800"
