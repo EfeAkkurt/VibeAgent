@@ -10,8 +10,6 @@ import {
   Home,
   Bot,
   AlertCircle,
-  Fingerprint,
-  Key,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWallet } from "../context/WalletContext";
@@ -20,43 +18,34 @@ interface HeaderProps {
   onChatOpen: () => void;
   onPostsOpen: () => void;
   onInfluencersOpen: () => void;
+  isWalletModalOpen: boolean;
+  setIsWalletModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const Header: React.FC<HeaderProps> = ({
   onChatOpen,
   onPostsOpen,
   onInfluencersOpen,
+  isWalletModalOpen,
+  setIsWalletModalOpen,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
-  const [username, setUsername] = useState("");
 
   const {
     isWalletConnected,
     publicKey,
     isConnecting,
     error,
-    biometricSupported,
-    biometricVerified,
-    authMethod,
     connectWallet,
     disconnectWallet,
     clearError,
-    retryConnection,
+    balance,
   } = useWallet();
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   const handleConnectWallet = async () => {
-    if (biometricSupported && !biometricVerified) {
-      if (!username.trim()) {
-        // You might want to show an error here
-        return;
-      }
-      await connectWallet(username);
-    } else {
-      await connectWallet();
-    }
+    await connectWallet();
   };
 
   const handleDisconnectWallet = async () => {
@@ -144,7 +133,7 @@ const Header: React.FC<HeaderProps> = ({
               >
                 <Wallet size={18} />
                 <span>
-                  {isWalletConnected ? "Connected" : "Connect Freighter"}
+                  {isWalletConnected ? "Connected" : "Connect Wallet"}
                 </span>
               </motion.button>
 
@@ -265,14 +254,11 @@ const Header: React.FC<HeaderProps> = ({
 
                 {/* Connect Wallet - Mobile */}
                 <motion.button
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.6, duration: 0.3 }}
-                  onClick={() => {
-                    setIsWalletModalOpen(true);
-                    toggleMenu();
-                  }}
-                  className={`w-full flex items-center justify-center space-x-3 py-4 rounded-2xl font-medium font-inter transition-all duration-300 shadow-lg ${
+                  initial={{ x: 50, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.4, duration: 0.3 }}
+                  onClick={() => setIsWalletModalOpen(true)}
+                  className={`w-full flex items-center justify-center space-x-3 px-6 py-4 rounded-2xl font-medium transition-all duration-300 shadow-lg mt-6 ${
                     isWalletConnected
                       ? "bg-green-500 text-white hover:bg-green-600"
                       : "bg-gradient-to-r from-primary to-foreground text-white hover:shadow-xl"
@@ -280,9 +266,7 @@ const Header: React.FC<HeaderProps> = ({
                 >
                   <Wallet size={20} />
                   <span>
-                    {isWalletConnected
-                      ? "Wallet Connected"
-                      : "Connect Freighter"}
+                    {isWalletConnected ? "Connected" : "Connect Wallet"}
                   </span>
                 </motion.button>
 
@@ -312,191 +296,102 @@ const Header: React.FC<HeaderProps> = ({
           <>
             {/* Modal Backdrop */}
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-              onClick={() => !isConnecting && setIsWalletModalOpen(false)}
-            />
-
-            {/* Modal Content */}
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: "spring", duration: 0.4 }}
-              className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md"
+              onClick={() => setIsWalletModalOpen(false)}
             >
-              <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="font-poppins font-bold text-primary text-2xl">
+              <motion.div
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 50, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold font-poppins text-foreground">
                     Wallet Connection
                   </h2>
-                  {isWalletConnected && (
-                    <div className="bg-green-100 px-3 py-1 rounded-full text-green-600 text-xs font-medium flex items-center">
-                      <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                      Connected
-                    </div>
-                  )}
+                  <button
+                    onClick={() => setIsWalletModalOpen(false)}
+                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"
+                  >
+                    <X size={24} />
+                  </button>
                 </div>
 
                 {error && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-red-50 border border-red-200 text-red-600 rounded-xl p-4 mb-6"
-                  >
-                    <div className="flex items-start">
-                      <AlertCircle
-                        className="mr-3 mt-0.5 flex-shrink-0"
-                        size={18}
-                      />
-                      <div>
-                        <p className="font-medium">{error.message}</p>
-                        {error.details && (
-                          <p className="text-sm mt-1 text-red-500">
-                            {error.details}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="mt-3 flex justify-end space-x-3">
-                      {!error.cancelled && (
-                        <button
-                          onClick={retryConnection}
-                          className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                        >
-                          Retry
-                        </button>
-                      )}
+                  <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-6 flex items-start space-x-3">
+                    <AlertCircle className="w-6 h-6 mt-1 text-red-500" />
+                    <div>
+                      <h4 className="font-bold">Connection Error</h4>
+                      <p className="text-sm">{error}</p>
                       <button
                         onClick={clearError}
-                        className="text-sm font-medium text-red-600 hover:text-red-800"
+                        className="mt-2 text-sm font-semibold text-red-600 hover:underline"
                       >
                         Dismiss
                       </button>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
 
                 {isWalletConnected ? (
-                  <div className="space-y-6">
-                    <div className="bg-gray-50 rounded-xl p-4">
-                      <p className="text-secondary text-sm mb-2">
-                        Connected Address
+                  <div className="space-y-4">
+                    <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+                      <p className="font-medium text-green-800">
+                        Successfully Connected!
                       </p>
-                      <p className="font-mono text-primary font-medium text-sm break-all">
+                      <p className="text-xs text-green-600 mt-1 break-all">
                         {publicKey}
                       </p>
+                      {balance !== null && (
+                        <p className="text-lg font-bold text-green-900 mt-2">
+                          Balance: {balance} XLM
+                        </p>
+                      )}
                     </div>
-
-                    {authMethod && (
-                      <div className="bg-blue-50 rounded-xl p-4 flex items-center space-x-3">
-                        <div className="bg-blue-100 p-2 rounded-full">
-                          {authMethod === "biometric" ? (
-                            <Fingerprint size={20} className="text-blue-500" />
-                          ) : (
-                            <Key size={20} className="text-blue-500" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-blue-800 font-medium">
-                            {authMethod === "biometric"
-                              ? "Biometric Authentication"
-                              : "Password Authentication"}
-                          </p>
-                          <p className="text-blue-600 text-sm">
-                            {authMethod === "biometric"
-                              ? "Using device biometrics for secure access"
-                              : "Using password for wallet access"}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    <motion.button
+                    <button
                       onClick={handleDisconnectWallet}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full bg-red-500 hover:bg-red-600 text-white font-poppins font-semibold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2"
+                      className="w-full bg-red-500 text-white py-3 rounded-xl hover:bg-red-600 transition-all font-semibold shadow-md"
                     >
-                      <span>Disconnect Wallet</span>
-                    </motion.button>
+                      Disconnect
+                    </button>
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    {biometricSupported === true && (
-                      <div className="bg-blue-50 rounded-xl p-4 flex items-center space-x-3">
-                        <div className="bg-blue-100 p-2 rounded-full">
-                          <Fingerprint size={20} className="text-blue-500" />
-                        </div>
-                        <div>
-                          <p className="text-blue-800 font-medium">
-                            Biometric Authentication
-                          </p>
-                          <p className="text-blue-600 text-sm">
-                            Secure your wallet with biometric verification
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {biometricSupported === true && (
-                      <div className="space-y-4">
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            placeholder="Enter username for biometric auth"
-                            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none font-inter"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <motion.button
+                  <div className="space-y-4">
+                    <p className="text-secondary text-center">
+                      Connect with your passkey (fingerprint, face, or device
+                      PIN).
+                    </p>
+                    <button
                       onClick={handleConnectWallet}
                       disabled={isConnecting}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-poppins font-semibold py-4 px-6 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl disabled:opacity-70"
+                      className="w-full flex items-center justify-center bg-gradient-to-r from-primary to-foreground text-white py-4 rounded-xl hover:shadow-xl transition-all font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isConnecting ? (
-                        <div className="flex items-center space-x-2">
-                          <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
-                          <span>
-                            {biometricSupported
-                              ? "Verifying Biometrics..."
-                              : "Connecting Wallet..."}
-                          </span>
-                        </div>
+                        <>
+                          <motion.div
+                            className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full mr-3"
+                            animate={{ rotate: 360 }}
+                            transition={{
+                              duration: 1,
+                              repeat: Infinity,
+                              ease: "linear",
+                            }}
+                          />
+                          Connecting...
+                        </>
                       ) : (
-                        <div className="flex items-center space-x-2">
-                          <Wallet size={18} />
-                          <span>Connect Freighter Wallet</span>
-                        </div>
+                        "Connect with Passkey"
                       )}
-                    </motion.button>
-
-                    <div className="text-xs text-secondary text-center">
-                      {biometricSupported === true && (
-                        <p>
-                          Biometric authentication is recommended for secure
-                          wallet connection
-                        </p>
-                      )}
-                      {biometricSupported === false && (
-                        <p>
-                          Biometric not supported. Password authentication will
-                          be used.
-                        </p>
-                      )}
-                    </div>
+                    </button>
                   </div>
                 )}
-              </div>
+              </motion.div>
             </motion.div>
           </>
         )}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import LoadingScreen from "./components/LoadingScreen";
 import Header from "./components/Header";
@@ -18,6 +18,7 @@ function App() {
   const [isPostsOpen, setIsPostsOpen] = useState(false);
   const [isInfluencersOpen, setIsInfluencersOpen] = useState(false);
   const [activeInfluencerId, setActiveInfluencerId] = useState<string>();
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
   const handleLoadingComplete = () => {
     setIsLoading(false);
@@ -53,6 +54,8 @@ function App() {
                 onChatOpen={() => handleChatOpen()}
                 onPostsOpen={handlePostsOpen}
                 onInfluencersOpen={handleInfluencersOpen}
+                isWalletModalOpen={isWalletModalOpen}
+                setIsWalletModalOpen={setIsWalletModalOpen}
               />
 
               <main>
