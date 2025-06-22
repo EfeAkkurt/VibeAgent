@@ -130,13 +130,23 @@ const InfluencerCards: React.FC<InfluencerCardsProps> = ({ onChatClick }) => {
               >
                 <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 h-full flex flex-col">
                   {/* Card Header with Image */}
-                  <div className="relative h-64 overflow-hidden">
+                  <div className="relative h-48 overflow-hidden">
                     <img
                       src={influencer.avatar}
                       alt={influencer.name}
                       className="w-full h-full object-cover"
+                      style={{ objectPosition: "center top" }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+                    <div className="absolute top-4 right-4">
+                      <div
+                        className={`px-3 py-1 rounded-full text-xs font-bold text-white bg-gradient-to-r ${getRarityColor(
+                          influencer.rarity
+                        )} shadow-lg`}
+                      >
+                        {influencer.rarity.toUpperCase()}
+                      </div>
+                    </div>
                     <div className="absolute bottom-4 left-4 right-4">
                       <div className="flex justify-between items-end">
                         <div>
@@ -146,13 +156,6 @@ const InfluencerCards: React.FC<InfluencerCardsProps> = ({ onChatClick }) => {
                           <p className="text-white/80 text-sm">
                             {influencer.category}
                           </p>
-                        </div>
-                        <div
-                          className={`px-3 py-1 rounded-full text-xs font-bold text-white bg-gradient-to-r ${getRarityColor(
-                            influencer.rarity
-                          )}`}
-                        >
-                          {influencer.rarity.toUpperCase()}
                         </div>
                       </div>
                     </div>

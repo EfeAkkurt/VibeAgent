@@ -6,10 +6,23 @@ export const DepositXLM: React.FC = () => {
     useWallet();
   const [amount, setAmount] = useState<string>("10");
   const [showQR, setShowQR] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [success, setSuccess] = useState<boolean>(false);
 
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await depositXLM(amount);
+    setIsLoading(true);
+    setSuccess(false);
+
+    try {
+      await depositXLM(amount);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 5000);
+    } catch (error) {
+      console.error("XLM yatırma hatası:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleShowAddress = () => {
@@ -36,11 +49,22 @@ export const DepositXLM: React.FC = () => {
                 id="amount"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
+                disabled={isLoading}
               />
             </div>
-            <button type="submit" className="deposit-button">
-              Test XLM Al
+            <button
+              type="submit"
+              className={`deposit-button ${isLoading ? "opacity-70" : ""}`}
+              disabled={isLoading}
+            >
+              {isLoading ? "İşlem Sürüyor..." : "Test XLM Al"}
             </button>
+
+            {success && (
+              <div className="success-message">
+                Test XLM başarıyla cüzdanınıza gönderildi!
+              </div>
+            )}
           </form>
         </div>
 

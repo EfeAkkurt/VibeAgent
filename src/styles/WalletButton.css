@@ -1,0 +1,143 @@
+.wallet-button-container {
+  position: relative;
+  z-index: 1000;
+}
+
+.wallet-button {
+  display: flex;
+  align-items: center;
+  background-color: #2d3748;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.wallet-button:hover {
+  background-color: #4a5568;
+}
+
+.wallet-icon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.wallet-balance {
+  font-weight: 600;
+}
+
+.wallet-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 320px;
+  max-width: 90vw;
+  margin-top: 8px;
+  z-index: 1001;
+  overflow: hidden;
+}
+
+.wallet-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.wallet-dropdown-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #1a202c;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #718096;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.close-button:hover {
+  background-color: #edf2f7;
+}
+
+/* Deposit bileşeni içindeki stilleri düzenleyelim */
+.wallet-dropdown .deposit-container {
+  padding: 16px;
+}
+
+.wallet-dropdown .deposit-container h2 {
+  margin-top: 0;
+  font-size: 18px;
+}
+
+.wallet-dropdown .form-group {
+  margin-bottom: 12px;
+}
+
+.wallet-dropdown .deposit-button,
+.wallet-dropdown .address-button {
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.wallet-dropdown .deposit-button:hover,
+.wallet-dropdown .address-button:hover {
+  background-color: #3182ce;
+}
+
+.wallet-dropdown .address-box {
+  background-color: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  word-break: break-all;
+  margin: 8px 0;
+}
+
+.wallet-dropdown .warning {
+  color: #e53e3e;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.wallet-dropdown .info-box {
+  background-color: #ebf8ff;
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 16px;
+}
+
+.wallet-dropdown .info-box h3 {
+  margin-top: 0;
+  font-size: 14px;
+  color: #2c5282;
+}
+
+.wallet-dropdown .info-box p {
+  margin-bottom: 0;
+  font-size: 12px;
+  color: #2d3748;
+}

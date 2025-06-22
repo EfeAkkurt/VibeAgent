@@ -6,13 +6,14 @@ import {
   MessageCircle,
   Image,
   Users,
-  Search,
   Home,
   Bot,
   AlertCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWallet } from "../context/WalletContext";
+import { WalletButton } from "./WalletButton";
+import { SearchBar } from "./SearchBar";
 
 interface HeaderProps {
   onChatOpen: () => void;
@@ -75,6 +76,8 @@ const Header: React.FC<HeaderProps> = ({
               className="flex items-center space-x-3"
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              onClick={() => (window.location.href = "/")}
+              style={{ cursor: "pointer" }}
             >
               <div className="relative">
                 <motion.div
@@ -108,14 +111,7 @@ const Header: React.FC<HeaderProps> = ({
 
             {/* Search Bar - Hidden on mobile */}
             <div className="hidden md:flex flex-1 max-w-md mx-8">
-              <div className="relative w-full">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-secondary w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="Search influencers, topics, or campaigns..."
-                  className="w-full pl-12 pr-4 py-3 bg-gray-50/80 border border-gray-200/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-all duration-300 font-inter text-sm placeholder-secondary/70"
-                />
-              </div>
+              <SearchBar placeholder="Influencer, konu veya kampanya ara..." />
             </div>
 
             {/* Right Side Actions */}
@@ -136,6 +132,13 @@ const Header: React.FC<HeaderProps> = ({
                   {isWalletConnected ? "Connected" : "Connect Wallet"}
                 </span>
               </motion.button>
+
+              {/* Wallet Button - For connected users */}
+              {isWalletConnected && (
+                <div className="hidden md:block">
+                  <WalletButton />
+                </div>
+              )}
 
               {/* Menu Button */}
               <motion.button
@@ -213,14 +216,7 @@ const Header: React.FC<HeaderProps> = ({
 
                 {/* Search on mobile */}
                 <div className="md:hidden mb-8">
-                  <div className="relative">
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-secondary w-5 h-5" />
-                    <input
-                      type="text"
-                      placeholder="Search..."
-                      className="w-full pl-12 pr-4 py-3 bg-gray-50/80 border border-gray-200/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-all duration-300 font-inter"
-                    />
-                  </div>
+                  <SearchBar placeholder="Ara..." />
                 </div>
 
                 {/* Navigation */}
@@ -252,23 +248,32 @@ const Header: React.FC<HeaderProps> = ({
                   ))}
                 </nav>
 
-                {/* Connect Wallet - Mobile */}
-                <motion.button
-                  initial={{ x: 50, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: 0.4, duration: 0.3 }}
-                  onClick={() => setIsWalletModalOpen(true)}
-                  className={`w-full flex items-center justify-center space-x-3 px-6 py-4 rounded-2xl font-medium transition-all duration-300 shadow-lg mt-6 ${
-                    isWalletConnected
-                      ? "bg-green-500 text-white hover:bg-green-600"
-                      : "bg-gradient-to-r from-primary to-foreground text-white hover:shadow-xl"
-                  }`}
-                >
-                  <Wallet size={20} />
-                  <span>
-                    {isWalletConnected ? "Connected" : "Connect Wallet"}
-                  </span>
-                </motion.button>
+                {/* Wallet Button - Mobile */}
+                <div className="mb-4">
+                  {isWalletConnected ? (
+                    <motion.button
+                      initial={{ x: 50, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.4, duration: 0.3 }}
+                      onClick={() => setIsWalletModalOpen(true)}
+                      className={`w-full flex items-center justify-center space-x-3 px-6 py-4 rounded-2xl font-medium transition-all duration-300 shadow-lg mt-6 bg-green-500 text-white hover:bg-green-600`}
+                    >
+                      <Wallet size={20} />
+                      <span>Wallet Connected</span>
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      initial={{ x: 50, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.4, duration: 0.3 }}
+                      onClick={() => setIsWalletModalOpen(true)}
+                      className="w-full flex items-center justify-center space-x-3 px-6 py-4 rounded-2xl font-medium transition-all duration-300 shadow-lg mt-6 bg-gradient-to-r from-primary to-foreground text-white hover:shadow-xl"
+                    >
+                      <Wallet size={20} />
+                      <span>Connect Wallet</span>
+                    </motion.button>
+                  )}
+                </div>
 
                 {/* Footer */}
                 <motion.div

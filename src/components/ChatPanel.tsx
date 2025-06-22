@@ -191,6 +191,23 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                         ? "bg-white/20 text-white"
                         : "hover:bg-white/10 text-white/70 hover:text-white"
                     }`}
+                    onClick={() => {
+                      if (influencer.id !== activeInfluencerId) {
+                        // Reset messages when switching influencers
+                        setMessages([]);
+                        // Add a small delay before adding the welcome message
+                        setTimeout(() => {
+                          setMessages([
+                            {
+                              id: "welcome",
+                              text: `Hi there! You're now chatting with ${influencer.name}. Feel free to ask me anything about ${influencer.category}.`,
+                              sender: "ai",
+                              timestamp: new Date(),
+                            },
+                          ]);
+                        }, 300);
+                      }
+                    }}
                   >
                     <div className="relative">
                       <img
@@ -218,7 +235,13 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             </div>
 
             {/* Chat Area - Takes remaining width */}
-            <div className="flex-1 flex flex-col h-full bg-white">
+            <motion.div
+              className="flex-1 flex flex-col h-full bg-white"
+              initial={{ x: "100%", opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              key={activeInfluencerId || "empty"}
+            >
               {/* Chat Header */}
               <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-background to-white">
                 <div className="flex items-center justify-between">
@@ -417,7 +440,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         </motion.div>
       )}
